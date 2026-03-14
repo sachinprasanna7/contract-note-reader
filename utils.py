@@ -6,6 +6,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+import shutil
+from datetime import datetime
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 CREDENTIALS_PATH = "secrets/credentials.json"
@@ -73,3 +75,77 @@ def get_broker_password(broker_name):
     except FileNotFoundError:
         print(f"Error: {PASSWORDS_PATH} not found.")
         return None
+
+def cleanup_downloads():
+    """Moves downloaded files to a structured archive folder based on broker and date."""
+    print("\n--- Starting Cleanup (Archiving) ---")
+    
+    download_dir = "downloads"
+    # Using a raw string (r"") to safely handle Windows backslashes
+    base_archive_dir = r"C:\Users\Pdogg Windows10\Desktop\Investment Information\Stocks"
+    
+    # Map your local download folders to your official desktop folder names
+    broker_mapping = {
+        "kotak": "Kotak Securities",
+        "angelone": "Angel One",
+        "groww": "Groww"  # Ready for when you add it
+    }
+    
+    if not os.path.exists(download_dir):
+        print(f"Directory '{download_dir}' does not exist. Nothing to clean.")
+        return
+
+    for root, dirs, files in os.walk(download_dir):
+        for file in files:
+            source_path = os.path.join(root, file)
+            
+            # Determine broker from the current folder name (e.g., 'kotak' or 'angelone')
+            broker_folder = os.path.basename(root).lower()
+            
+            if broker_folder not in broker_mapping:
+                print(f"Skipping {file}: Unknown broker folder '{broker_folder}'")
+                continue
+            
+            official_broker_name = broker_mapping[broker_folder]
+            
+            # Extract Date based on the broker's specific naming convention
+            try:
+                if broker_folder == "kotak":
+                    # CN_20260309_W8RHY_MER.pdf -> 20260309
+                    raw_date = file.split('_')[1]
+                    dt_obj = datetime.strptime(raw_date, '%Y%m%d')
+                    
+                elif broker_folder == "angelone":
+                    # CN_S592652_09032026.pdf -> 09032026
+                    raw_date = file.split('_')[2].replace('.pdf', '')
+                    dt_obj = datetime.strptime(raw_date, '%d%m%Y')
+                    
+                else:
+                    print(f"Date logic not set up for {broker_folder}. Skipping.")
+                    continue
+                
+                # Format the year (2026) and full month name (March)
+                year_str = dt_obj.strftime('%Y')
+                month_str = dt_obj.strftime('%B')
+                
+            except Exception as e:
+                print(f"Could not parse date from {file}. Error: {e}")
+                continue
+            
+            # Construct the final destination path
+            # Result: C:\...\Stocks\Angel One\Contract Notes\2026\March
+            dest_dir = os.path.join(base_archive_dir, official_broker_name, "Contract Notes", year_str, month_str)
+            
+            # Create the Year\Month folders if they don't exist yet
+            os.makedirs(dest_dir, exist_ok=True)
+            
+            dest_path = os.path.join(dest_dir, file)
+            
+            try:
+                # Move the file and overwrite if it already exists in the archive
+                shutil.move(source_path, dest_path)
+                print(f"Successfully archived: {file} -> {dest_dir}")
+            except Exception as e:
+                print(f"Failed to move {file}. Error: {e}")
+                
+    print("Cleanup complete.")
