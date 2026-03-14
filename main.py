@@ -1,14 +1,14 @@
 # main.py
-from scripts.gmail_reader import connect_gmail
-from scripts.kotak import process_kotak
+from utils import connect_gmail
+from modules.kotak import process_kotak
+
 def main():
     print("Starting Daily Contract Note Reader...")
     
     try:
-        # Initialize Gmail API once
         gmail_service = connect_gmail()
         
-        # Process Kotak
+        # Run broker modules
         process_kotak(gmail_service)
         
         print("Daily execution completed successfully.")

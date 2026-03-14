@@ -1,5 +1,6 @@
-# scripts/gmail_reader.py
+# utils.py
 import os
+import json
 import base64
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -9,8 +10,10 @@ from googleapiclient.discovery import build
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 CREDENTIALS_PATH = "secrets/credentials.json"
 TOKEN_PATH = "secrets/token.json"
+PASSWORDS_PATH = "secrets/broker_passwords.json"
 
 def connect_gmail():
+    """Authenticates and returns the Gmail service."""
     creds = None
     if os.path.exists(TOKEN_PATH):
         creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
@@ -25,13 +28,12 @@ def connect_gmail():
     return build("gmail", "v1", credentials=creds)
 
 def download_attachments(service, query, save_dir):
-    """Searches for emails matching the query and downloads attachments."""
+    """Searches for emails matching the query and downloads PDF attachments."""
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     results = service.users().messages().list(userId='me', q=query).execute()
     messages = results.get('messages', [])
-
     downloaded_files = []
 
     if not messages:
@@ -61,3 +63,13 @@ def download_attachments(service, query, save_dir):
                 downloaded_files.append(filepath)
                 
     return downloaded_files
+
+def get_broker_password(broker_name):
+    """Reads the broker password from the secrets file."""
+    try:
+        with open(PASSWORDS_PATH, "r") as f:
+            passwords = json.load(f)
+            return passwords.get(broker_name)
+    except FileNotFoundError:
+        print(f"Error: {PASSWORDS_PATH} not found.")
+        return None
