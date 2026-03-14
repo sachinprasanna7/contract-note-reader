@@ -1,6 +1,7 @@
 # main.py
 from utils import connect_gmail
 from modules.kotak import process_kotak
+from modules.angelone import process_angelone
 
 def main():
     print("Starting Daily Contract Note Reader...")
@@ -9,7 +10,8 @@ def main():
         gmail_service = connect_gmail()
         
         # Run broker modules
-        process_kotak(gmail_service)
+        #process_kotak(gmail_service)
+        process_angelone(gmail_service)
         
         print("Daily execution completed successfully.")
         
